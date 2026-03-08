@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "./supabase";
+import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
 
 // ── Species Data ──────────────────────────────────────────────────────────────
 const FROGS = [
@@ -314,43 +316,55 @@ function AuthModal({ onClose, onAuth }) {
 
 // ── Florida Map ───────────────────────────────────────────────────────────────
 function FloridaMap({ sightings }) {
-  // Florida bounding box: lat 24.5–31.0, lng -87.6–-80.0
-  const toXY = (lat, lng) => ({
-    x: ((lng - (-87.6)) / (87.6 - 80.0)) * 100,
-    y: 100 - ((lat - 24.5) / (31.0 - 24.5)) * 100
-  });
-
   const withCoords = sightings.filter(s => s.latitude && s.longitude);
+  // Florida center
+  const center = [27.8, -83.5];
 
   return (
-    <div style={{position:"relative",borderRadius:16,overflow:"hidden",background:"#0a1f0c",border:"1px solid #2e7d32",marginBottom:20}}>
-      <div style={{padding:"10px 14px",borderBottom:"1px solid #1b5e20",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+    <div style={{borderRadius:16,overflow:"hidden",border:"1px solid #2e7d32",marginBottom:20}}>
+      <div style={{padding:"10px 14px",background:"#0a1f0c",borderBottom:"1px solid #1b5e20",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{fontSize:11,color:"#66bb6a",letterSpacing:"2px",fontFamily:"'DM Sans',sans-serif"}}>🗺️ SIGHTINGS MAP</span>
         <span style={{fontSize:11,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif"}}>{withCoords.length} with location</span>
       </div>
-      <div style={{position:"relative",width:"100%",paddingBottom:"60%",background:"linear-gradient(160deg,#0a1f0c,#061008)"}}>
-        {/* Simple Florida outline SVG */}
-        <svg viewBox="0 0 100 60" style={{position:"absolute",inset:0,width:"100%",height:"100%",opacity:0.3}}>
-          <path d="M15,5 L85,5 L85,20 L75,25 L72,40 L68,50 L65,55 L60,58 L55,55 L52,45 L50,55 L47,58 L42,55 L38,45 L35,50 L30,45 L25,30 L20,20 L15,15 Z" fill="none" stroke="#2e7d32" strokeWidth="0.8"/>
-        </svg>
-        {withCoords.map((s,i) => {
-          const frog = FROGS.find(f=>f.name===s.species);
-          const {x,y} = toXY(s.latitude, s.longitude);
-          return (
-            <div key={s.id||i} title={`${s.species} — ${s.username||"anonymous"}`} style={{
-              position:"absolute", left:`${x}%`, top:`${y}%`,
-              width:10, height:10, borderRadius:"50%",
-              background:frog?.color||"#4caf50",
-              border:"1.5px solid rgba(255,255,255,.4)",
-              transform:"translate(-50%,-50%)",
-              boxShadow:`0 0 6px ${frog?.color||"#4caf50"}`,
-              cursor:"pointer", zIndex:2
-            }}/>
-          );
-        })}
+      <div style={{height:380,position:"relative"}}>
+        <MapContainer
+          center={center}
+          zoom={6}
+          style={{height:"100%",width:"100%"}}
+          scrollWheelZoom={true}
+        >
+          <TileLayer
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+          />
+          {withCoords.map((s,i) => {
+            const frog = FROGS.find(f=>f.name===s.species);
+            const color = frog?.color || "#4caf50";
+            return (
+              <CircleMarker
+                key={s.id||i}
+                center={[s.latitude, s.longitude]}
+                radius={8}
+                pathOptions={{color:"white",weight:1.5,fillColor:color,fillOpacity:0.9}}
+              >
+                <Popup>
+                  <div style={{fontFamily:"sans-serif",minWidth:140}}>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:2}}>{s.species}</div>
+                    <div style={{fontSize:11,color:"#555",fontStyle:"italic",marginBottom:4}}>{frog?.sci}</div>
+                    <div style={{fontSize:11,color:"#333"}}>👤 {s.username||"anonymous"}</div>
+                    <div style={{fontSize:11,color:"#333"}}>📊 {s.confidence_pct}% {s.confidence}</div>
+                    <div style={{fontSize:10,color:"#888",marginTop:3}}>{s.method==="sound"?"🎙️ Sound ID":"📷 Photo ID"}</div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
+        </MapContainer>
         {withCoords.length===0&&(
-          <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <p style={{color:"#2e7d32",fontSize:12,fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>Sightings with location data<br/>will appear as dots on the map</p>
+          <div style={{position:"absolute",bottom:12,left:0,right:0,textAlign:"center",zIndex:1000,pointerEvents:"none"}}>
+            <div style={{display:"inline-block",padding:"6px 14px",background:"rgba(6,15,8,.8)",borderRadius:20,border:"1px solid #2e7d32"}}>
+              <p style={{color:"#66bb6a",fontSize:11,fontFamily:"'DM Sans',sans-serif",margin:0}}>Enable location when identifying to add pins to the map</p>
+            </div>
           </div>
         )}
       </div>
