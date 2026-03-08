@@ -314,6 +314,110 @@ function AuthModal({ onClose, onAuth }) {
   );
 }
 
+// ── Listen Library ────────────────────────────────────────────────────────────
+function ListenLibrary({ playingRef, onPlay }) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  const filtered = FROGS.filter(f => {
+    const matchSearch = f.name.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === "all" || (filter === "native" && f.native) || (filter === "invasive" && !f.native);
+    return matchSearch && matchFilter;
+  });
+
+  return (
+    <div>
+      {/* Search */}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search species…"
+        style={{
+          width:"100%", padding:"10px 14px", borderRadius:12, marginBottom:10,
+          background:"#0e1f10", border:"1px solid #2e7d32", color:"#c8e6c9",
+          fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none"
+        }}
+      />
+      {/* Filter */}
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        {[["all","All 32"],["native","Native"],["invasive","Invasive"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setFilter(id)} style={{
+            padding:"5px 12px", borderRadius:16, fontSize:11, fontFamily:"'DM Sans',sans-serif",
+            cursor:"pointer", transition:"all .2s",
+            background:filter===id?"rgba(76,175,80,.2)":"transparent",
+            border:`1px solid ${filter===id?"#4caf50":"#2e7d32"}`,
+            color:filter===id?"#a5d6a7":"#4a7c59"
+          }}>{label}</button>
+        ))}
+        <div style={{marginLeft:"auto",fontSize:11,color:"#2e7d32",fontFamily:"'DM Sans',sans-serif",alignSelf:"center"}}>
+          {filtered.length} species
+        </div>
+      </div>
+
+      {/* Species list */}
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {filtered.map(frog => {
+          const isPlaying = playingRef === frog.file;
+          return (
+            <div key={frog.file} style={{
+              borderRadius:14, padding:"12px 14px",
+              background: isPlaying ? `${frog.color}18` : "rgba(27,94,32,.12)",
+              border: `1px solid ${isPlaying ? frog.color+"66" : frog.color+"33"}`,
+              transition:"all .25s"
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                {/* Play button */}
+                <button onClick={()=>onPlay(frog)} style={{
+                  width:42, height:42, borderRadius:"50%", flexShrink:0,
+                  background: isPlaying ? `${frog.color}` : "rgba(27,94,32,.4)",
+                  border: `2px solid ${isPlaying ? frog.color : "#2e7d32"}`,
+                  color:"white", cursor:"pointer", fontSize:16,
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  boxShadow: isPlaying ? `0 0 16px ${frog.color}66` : "none",
+                  transition:"all .25s"
+                }}>
+                  {isPlaying ? "⏹" : "▶"}
+                </button>
+
+                {/* Info */}
+                <div style={{flex:1, minWidth:0}}>
+                  <div style={{fontSize:14,fontWeight:600,color:"#c8e6c9",fontFamily:"'DM Sans',sans-serif",lineHeight:1.2}}>{frog.name}</div>
+                  <div style={{fontSize:10,fontStyle:"italic",color:"#66bb6a",fontFamily:"'DM Sans',sans-serif",marginBottom:2}}>{frog.sci}</div>
+                  <div style={{fontSize:10,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{frog.habitat}</div>
+                </div>
+
+                {/* Size + native badge */}
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontSize:11,color:"#a5d6a7",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{frog.size}</div>
+                  {!frog.native && (
+                    <div style={{fontSize:9,color:"#ff8a65",fontFamily:"'DM Sans',sans-serif",background:"rgba(255,138,101,.1)",padding:"1px 6px",borderRadius:8,border:"1px solid rgba(255,138,101,.3)"}}>invasive</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Playing indicator bar */}
+              {isPlaying && (
+                <div style={{marginTop:10,display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{flex:1,height:2,background:"#1b5e20",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{height:"100%",background:`linear-gradient(90deg,${frog.color},#66bb6a)`,animation:"playbar 3s linear infinite",backgroundSize:"200% 100%"}}/>
+                  </div>
+                  <span style={{fontSize:9,color:frog.color,fontFamily:"'DM Sans',sans-serif",letterSpacing:"1px"}}>PLAYING</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div style={{textAlign:"center",padding:"30px 0",color:"#2e7d32"}}>
+          <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:13}}>No species match your search.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Florida Map ───────────────────────────────────────────────────────────────
 function FloridaMap({ sightings }) {
   const withCoords = sightings.filter(s => s.latitude && s.longitude);
@@ -770,7 +874,7 @@ export default function FrogFinder() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0;}
-        .tab{flex:1;padding:12px 0;border:none;background:transparent;color:#4a7c59;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;}
+        .tab{flex:1;padding:10px 0;border:none;background:transparent;color:#4a7c59;font-size:9px;letter-spacing:1px;text-transform:uppercase;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .2s;border-bottom:2px solid transparent;}
         .tab.on{color:#a5d6a7;border-bottom:2px solid #4caf50;}
         .ctab{padding:7px 14px;border-radius:20px;font-size:11px;font-family:'DM Sans',sans-serif;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;border:1px solid #2e7d32;background:transparent;color:#4a7c59;}
         .ctab.on{background:rgba(76,175,80,.15);border-color:#4caf50;color:#a5d6a7;}
@@ -778,6 +882,7 @@ export default function FrogFinder() {
         @keyframes pulse{0%{transform:scale(1);opacity:.8}100%{transform:scale(2.2);opacity:0}}
         @keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes playbar{0%{background-position:200% 0}100%{background-position:-200% 0}}
         .fu{animation:up .35s ease forwards;}
         .pr{animation:pulse 1.5s ease-out infinite;}
       `}</style>
@@ -827,7 +932,7 @@ export default function FrogFinder() {
 
       {/* Tabs */}
       <div style={{display:"flex",borderBottom:"1px solid #1a2e1c",background:"#060f08",position:"sticky",top:0,zIndex:10}}>
-        {[["sound","🎙️ Sound"],["photo","📷 Photo"],["journal","📓 Journal"],["community","🌎 Community"]].map(([id,label])=>(
+        {[["sound","🎙️ Sound"],["photo","📷 Photo"],["listen","🔊 Listen"],["journal","📓 Journal"],["community","🌎 Community"]].map(([id,label])=>(
           <button key={id} className={`tab${tab===id?" on":""}`} onClick={()=>setTab(id)}>{label}</button>
         ))}
       </div>
@@ -1005,6 +1110,16 @@ export default function FrogFinder() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* LISTEN TAB */}
+        {tab==="listen"&&(
+          <div className="fu">
+            <p style={{fontSize:13,color:"#66bb6a",lineHeight:1.6,marginBottom:16,fontFamily:"'DM Sans',sans-serif"}}>
+              Browse all 32 Florida frog species and listen to their reference calls.
+            </p>
+            <ListenLibrary playingRef={playingRef} onPlay={playRef}/>
           </div>
         )}
 
