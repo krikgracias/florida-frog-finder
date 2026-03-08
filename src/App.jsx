@@ -372,8 +372,73 @@ function FloridaMap({ sightings }) {
   );
 }
 
+// ── Sighting Card ─────────────────────────────────────────────────────────────
+function SightingCard({ sighting: e, frog, isOwner, onDelete, onCorrect }) {
+  const [showCorrect, setShowCorrect] = useState(false);
+  const [selectedSpecies, setSelectedSpecies] = useState(e.species);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleCorrect = () => {
+    if (selectedSpecies !== e.species) onCorrect(selectedSpecies);
+    setShowCorrect(false);
+  };
+
+  return (
+    <div style={{borderRadius:14,overflow:"hidden",background:"rgba(27,94,32,.15)",border:`1px solid ${frog?.color||"#2e7d32"}44`}}>
+      {e.photo_url&&<img src={e.photo_url} alt={e.species} style={{width:"100%",maxHeight:180,objectFit:"cover",display:"block"}}/>}
+      <div style={{padding:"11px 13px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14,fontWeight:600,color:"#c8e6c9",fontFamily:"'DM Sans',sans-serif"}}>{e.species}</div>
+            <div style={{fontSize:10,color:"#66bb6a",fontStyle:"italic",fontFamily:"'DM Sans',sans-serif"}}>{frog?.sci||e.scientific}</div>
+            {e.username&&<div style={{fontSize:10,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>👤 {e.username}</div>}
+          </div>
+          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
+            <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:`${confColor(e.confidence)}22`,color:confColor(e.confidence),fontFamily:"'DM Sans',sans-serif"}}>{e.confidence_pct}%</span>
+            <span style={{fontSize:10}}>{e.method==="sound"?"🎙️":"📷"} <span style={{color:"#2e7d32",fontSize:9}}>{timeAgo(e.created_at)}</span></span>
+          </div>
+        </div>
+        {e.latitude&&<div style={{fontSize:10,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif",marginBottom:isOwner?6:0}}>📍 {e.latitude.toFixed(3)}, {e.longitude.toFixed(3)}</div>}
+
+        {isOwner&&(
+          <>
+            {showCorrect?(
+              <div style={{marginTop:6}}>
+                <div style={{fontSize:10,color:"#66bb6a",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Select the correct species:</div>
+                <select value={selectedSpecies} onChange={ev=>setSelectedSpecies(ev.target.value)} style={{
+                  width:"100%",padding:"8px 10px",borderRadius:8,marginBottom:6,
+                  background:"#0e1f10",border:"1px solid #2e7d32",color:"#c8e6c9",
+                  fontSize:13,fontFamily:"'DM Sans',sans-serif",outline:"none"
+                }}>
+                  {FROGS.map(f=><option key={f.name} value={f.name}>{f.name}</option>)}
+                </select>
+                <div style={{display:"flex",gap:6}}>
+                  <button onClick={handleCorrect} style={{flex:1,padding:"7px",borderRadius:8,background:"rgba(76,175,80,.2)",border:"1px solid #4caf50",color:"#a5d6a7",cursor:"pointer",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>✓ Save</button>
+                  <button onClick={()=>setShowCorrect(false)} style={{padding:"7px 12px",borderRadius:8,background:"transparent",border:"1px solid #2e7d32",color:"#4a7c59",cursor:"pointer",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>Cancel</button>
+                </div>
+              </div>
+            ):(
+              <div style={{display:"flex",gap:6,marginTop:6}}>
+                <button onClick={()=>setShowCorrect(true)} style={{flex:1,padding:"6px",borderRadius:8,background:"rgba(27,94,32,.3)",border:"1px solid #2e7d32",color:"#66bb6a",cursor:"pointer",fontSize:11,fontFamily:"'DM Sans',sans-serif"}}>✏️ Wrong species?</button>
+                {confirmDelete?(
+                  <>
+                    <button onClick={()=>onDelete(e.id)} style={{flex:1,padding:"6px",borderRadius:8,background:"rgba(183,28,28,.3)",border:"1px solid #c62828",color:"#ef9a9a",cursor:"pointer",fontSize:11,fontFamily:"'DM Sans',sans-serif"}}>Confirm delete</button>
+                    <button onClick={()=>setConfirmDelete(false)} style={{padding:"6px 10px",borderRadius:8,background:"transparent",border:"1px solid #2e7d32",color:"#4a7c59",cursor:"pointer",fontSize:11,fontFamily:"'DM Sans',sans-serif"}}>✕</button>
+                  </>
+                ):(
+                  <button onClick={()=>setConfirmDelete(true)} style={{padding:"6px 10px",borderRadius:8,background:"rgba(183,28,28,.12)",border:"1px solid #c6282844",color:"#ef5350",cursor:"pointer",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>🗑️</button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Community Feed ────────────────────────────────────────────────────────────
-function CommunityFeed({ sightings, currentUser }) {
+function CommunityFeed({ sightings, currentUser, onDelete, onCorrect }) {
   const [filter,setFilter]=useState("all");
   const filtered = filter==="all" ? sightings : sightings.filter(s=>s.user_id===currentUser?.id);
 
@@ -397,34 +462,14 @@ function CommunityFeed({ sightings, currentUser }) {
           }}>{f==="all"?"All Sightings":"My Sightings"}</button>
         ))}
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
         {filtered.map(s=>{
           const frog=FROGS.find(f=>f.name===s.species);
+          const isOwner=currentUser&&s.user_id===currentUser.id;
           return (
-            <div key={s.id} style={{borderRadius:16,overflow:"hidden",background:"rgba(27,94,32,.12)",border:`1px solid ${frog?.color||"#2e7d32"}33`}}>
-              {s.photo_url&&(
-                <img src={s.photo_url} alt={s.species} style={{width:"100%",maxHeight:200,objectFit:"cover",display:"block"}}/>
-              )}
-              <div style={{padding:"12px 14px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                  <div>
-                    <div style={{fontSize:15,fontWeight:600,color:"#c8e6c9",fontFamily:"'DM Sans',sans-serif"}}>{s.species}</div>
-                    <div style={{fontSize:11,fontStyle:"italic",color:"#66bb6a",fontFamily:"'DM Sans',sans-serif"}}>{frog?.sci}</div>
-                  </div>
-                  <div style={{textAlign:"right"}}>
-                    <div style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:`${confColor(s.confidence)}22`,color:confColor(s.confidence),fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{s.confidence_pct}%</div>
-                    <div style={{fontSize:10,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif"}}>{s.method==="sound"?"🎙️":"📷"}</div>
-                  </div>
-                </div>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={{fontSize:11,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif"}}>
-                    👤 {s.username||"anonymous"}
-                    {s.latitude&&` · 📍 ${s.latitude.toFixed(2)}, ${s.longitude.toFixed(2)}`}
-                  </div>
-                  <div style={{fontSize:10,color:"#2e7d32",fontFamily:"'DM Sans',sans-serif"}}>{timeAgo(s.created_at)}</div>
-                </div>
-              </div>
-            </div>
+            <SightingCard key={s.id} sighting={s} frog={frog} isOwner={isOwner}
+              onDelete={onDelete} onCorrect={(newSpecies)=>onCorrect(s.id,newSpecies)}
+            />
           );
         })}
       </div>
@@ -699,6 +744,20 @@ export default function FrogFinder() {
       setJournal(prev=>[data,...prev]);
       setCommunitySightings(prev=>[data,...prev]);
     }
+  };
+
+  const deleteSighting=async(id)=>{
+    await supabase.from("sightings").delete().eq("id",id);
+    setJournal(prev=>prev.filter(e=>e.id!==id));
+    setCommunitySightings(prev=>prev.filter(e=>e.id!==id));
+  };
+
+  const correctSighting=async(id, newSpecies)=>{
+    const frog=FROGS.find(f=>f.name===newSpecies);
+    const updates={species:newSpecies, scientific:frog?.sci, native:frog?.native};
+    await supabase.from("sightings").update(updates).eq("id",id);
+    setJournal(prev=>prev.map(e=>e.id===id?{...e,...updates}:e));
+    setCommunitySightings(prev=>prev.map(e=>e.id===id?{...e,...updates}:e));
   };
 
   const signOut=async()=>{ await supabase.auth.signOut(); setJournal([]); };
@@ -978,25 +1037,10 @@ export default function FrogFinder() {
                     {journal.map(e=>{
                       const frog=FROGS.find(f=>f.name===e.species);
                       return (
-                        <div key={e.id} style={{borderRadius:14,overflow:"hidden",background:"rgba(27,94,32,.15)",border:`1px solid ${frog?.color||"#2e7d32"}44`}}>
-                          {e.photo_url&&<img src={e.photo_url} alt={e.species} style={{width:"100%",maxHeight:160,objectFit:"cover",display:"block"}}/>}
-                          <div style={{padding:"11px 13px"}}>
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:3}}>
-                              <div>
-                                <div style={{fontSize:14,fontWeight:600,color:"#c8e6c9",fontFamily:"'DM Sans',sans-serif"}}>{e.species}</div>
-                                <div style={{fontSize:10,color:"#66bb6a",fontStyle:"italic",fontFamily:"'DM Sans',sans-serif"}}>{frog?.sci||e.scientific}</div>
-                              </div>
-                              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3}}>
-                                <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,background:`${confColor(e.confidence)}22`,color:confColor(e.confidence),fontFamily:"'DM Sans',sans-serif"}}>{e.confidence_pct}%</span>
-                                <span style={{fontSize:11}}>{e.method==="sound"?"🎙️":"📷"}</span>
-                              </div>
-                            </div>
-                            <div style={{fontSize:10,color:"#4a7c59",fontFamily:"'DM Sans',sans-serif"}}>
-                              🕐 {new Date(e.created_at).toLocaleString()}
-                              {e.latitude&&` · 📍 ${e.latitude.toFixed(2)}, ${e.longitude.toFixed(2)}`}
-                            </div>
-                          </div>
-                        </div>
+                        <SightingCard key={e.id} sighting={e} frog={frog} isOwner={true}
+                          onDelete={()=>deleteSighting(e.id)}
+                          onCorrect={(newSpecies)=>correctSighting(e.id,newSpecies)}
+                        />
                       );
                     })}
                   </div>
@@ -1029,7 +1073,7 @@ export default function FrogFinder() {
                 <button key={id} className={`ctab${communityTab===id?" on":""}`} onClick={()=>setCommunityTab(id)}>{label}</button>
               ))}
             </div>
-            {communityTab==="feed"&&<CommunityFeed sightings={communitySightings} currentUser={user}/>}
+            {communityTab==="feed"&&<CommunityFeed sightings={communitySightings} currentUser={user} onDelete={deleteSighting} onCorrect={correctSighting}/>}
             {communityTab==="map"&&<FloridaMap sightings={communitySightings}/>}
             {communityTab==="leaderboard"&&(
               <>
