@@ -798,7 +798,7 @@ export default function CroakID() {
               Croak<span style={{color:"#66bb6a"}}>ID</span>
             </h1>
             <p style={{fontSize:9,color:"#4a7c59",letterSpacing:"2px",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>
-              {localRegion?`📍 ${REGIONS[localRegion]||localRegion} · `:""}{refsReady?`${AUDIO_SPECIES.length} audio species ready`:`Loading audio ${refsCount}/${AUDIO_SPECIES.length}…`}
+              {localRegion?`📍 ${REGIONS[localRegion]||localRegion} · `:""}{refsReady?`${SPECIES.length} species · ${AUDIO_SPECIES.length} with audio ✓`:`Loading audio ${refsCount}/${AUDIO_SPECIES.length}…`}
             </p>
           </div>
           {user?(
